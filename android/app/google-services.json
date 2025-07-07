@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "620700997033",
+    "project_id": "accounting-software-903a0",
+    "storage_bucket": "accounting-software-903a0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:620700997033:android:efe86edd5dd56e966360b8",
+        "android_client_info": {
+          "package_name": "com.example.ledgr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB1f4znWPvnzE2KmEssD58CYFCm9NoU7sI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

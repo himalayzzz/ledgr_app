@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -54,12 +51,22 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyBik-Eb2lsMhFJNnwuKurK-tRDVdGCCZFo',
-    appId: '1:620700997033:web:ec4689926ed9a1c56360b8',
+    appId: '1:620700997033:web:2dc3585fe4bf085f6360b8',
     messagingSenderId: '620700997033',
     projectId: 'accounting-software-903a0',
     authDomain: 'accounting-software-903a0.firebaseapp.com',
     storageBucket: 'accounting-software-903a0.firebasestorage.app',
-    measurementId: 'G-XLE3SGZY0T',
+    measurementId: 'G-264VTHV04K',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyBik-Eb2lsMhFJNnwuKurK-tRDVdGCCZFo',
+    appId: '1:620700997033:web:a630ba38df4029896360b8',
+    messagingSenderId: '620700997033',
+    projectId: 'accounting-software-903a0',
+    authDomain: 'accounting-software-903a0.firebaseapp.com',
+    storageBucket: 'accounting-software-903a0.firebasestorage.app',
+    measurementId: 'G-8KK78C1PQ2',
   );
 
 }

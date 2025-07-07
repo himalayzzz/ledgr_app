@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:ledgr/screens/event_detail_screen.dart';
 
@@ -7,21 +8,62 @@ class AccountsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Accounts',style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)), backgroundColor: Colors.blue,),
-      body: ListView(
+      appBar: AppBar(
+        title: const Text('Accounts',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.blue,
+      ),
+      body: Padding(
         padding: const EdgeInsets.all(16),
-        children: [
-          const Text('Events', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          // Example Event (Replace with Firestore data)
-          _EventTile(title: 'Sunday Offering', date: 'June 23, 2025'),
-          _EventTile(title: 'Special Fundraiser', date: 'June 10, 2025'),
-        ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Events',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+
+            // 🔥 List Events from Firestore
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('events')
+                    .orderBy('date', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data!.docs;
+
+                  if (docs.isEmpty) {
+                    return const Text('No events yet.');
+                  }
+
+                  return ListView.builder(
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final doc = docs[index];
+                      final data = doc.data()! as Map<String, dynamic>;
+
+                      final eventTitle = data['title'] ?? '';
+                      final eventDate = (data['date'] as Timestamp).toDate();
+
+                      return _EventTile(
+                        eventId: doc.id,
+                        title: eventTitle,
+                        date: eventDate,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showAddEventDialog(context);
-        },
+        onPressed: () => _showAddEventDialog(context),
         tooltip: 'Add Event',
         child: const Icon(Icons.add),
       ),
@@ -40,25 +82,56 @@ class AccountsScreen extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Title')),
-              TextField(controller: dateController, decoration: const InputDecoration(labelText: 'Date (e.g., June 30, 2025)')),
+              TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Title')),
+              TextField(
+                  controller: dateController,
+                  decoration: const InputDecoration(
+                      labelText: 'Date (e.g., 2025-06-30)')),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EventDetailScreen(
-                    eventId: 'abc123', // Firebase doc ID
-                    eventTitle: 'Sunday Offering',
-                    eventDate: 'June 30, 2025',
-                  ),
-                ),
-              );
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final title = titleController.text.trim();
+                final dateStr = dateController.text.trim();
 
-                // Save to Firestore here
+                if (title.isEmpty || dateStr.isEmpty) return;
+
+                final date = DateTime.tryParse(dateStr);
+                if (date == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Invalid date format')),
+                  );
+                  return;
+                }
+
+                final newEvent = await FirebaseFirestore.instance
+                    .collection('events')
+                    .add({
+                  'title': title,
+                  'date': Timestamp.fromDate(date),
+                });
+
+                Navigator.pop(context);
+
+                // Navigate to Event Detail
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EventDetailScreen(
+                      eventId: newEvent.id,
+                      eventTitle: title,
+                      eventDate:
+                          '${date.year}-${date.month}-${date.day}', // or use intl
+                    ),
+                  ),
+                );
               },
               child: const Text('Add'),
             ),
@@ -70,19 +143,33 @@ class AccountsScreen extends StatelessWidget {
 }
 
 class _EventTile extends StatelessWidget {
+  final String eventId;
   final String title;
-  final String date;
+  final DateTime date;
 
-  const _EventTile({required this.title, required this.date});
+  const _EventTile({
+    required this.eventId,
+    required this.title,
+    required this.date,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(title),
-      subtitle: Text(date),
+      subtitle: Text('${date.year}-${date.month}-${date.day}'),
       trailing: const Icon(Icons.arrow_forward_ios),
       onTap: () {
-        Navigator.pushNamed(context, '/event-detail'); // Route to be created
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EventDetailScreen(
+              eventId: eventId,
+              eventTitle: title,
+              eventDate: '${date.year}-${date.month}-${date.day}',
+            ),
+          ),
+        );
       },
     );
   }
