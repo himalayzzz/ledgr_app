@@ -12,7 +12,7 @@ class AddMemberScreen extends StatelessWidget {
     final dateCtl = TextEditingController();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Member'), backgroundColor: Colors.blue),
+      appBar: AppBar(title: const Text('Add Member', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),), backgroundColor: Colors.blue),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(

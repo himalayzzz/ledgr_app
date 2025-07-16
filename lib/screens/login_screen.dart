@@ -51,17 +51,16 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 10),
             Padding(
-              padding: const EdgeInsets.all(10),
-              child: Text('ledgr',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 30,
-                    fontWeight: FontWeight.bold,
-                  )),
+              padding: const EdgeInsets.all(5),
+              child: Image.asset(
+                'assets/ledgr.png',
+                height: 150,
+                width: 500,
+              ),
             ),
             const SizedBox(height: 10),
             Expanded(
