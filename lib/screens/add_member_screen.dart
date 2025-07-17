@@ -1,18 +1,38 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+
 class AddMemberScreen extends StatelessWidget {
-  const AddMemberScreen({super.key});
+  final String familyId; // ✅ Now this must be passed from outside
+  final String? memberId;
+  final Map<String, dynamic>? existingData;
+
+  const AddMemberScreen({
+    super.key,
+    required this.familyId, // ✅ REQUIRED — must be passed
+    this.memberId,
+    this.existingData,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final nameCtl = TextEditingController();
-    final phoneCtl = TextEditingController();
-    final addressCtl = TextEditingController();
-    final dateCtl = TextEditingController();
+    final nameCtl = TextEditingController(text: existingData?['name'] ?? '');
+    final phoneCtl = TextEditingController(text: existingData?['phone'] ?? '');
+    final addressCtl = TextEditingController(text: existingData?['address'] ?? '');
+    final dateCtl = TextEditingController(
+      text: existingData?['joinedDate'] != null
+          ? (existingData!['joinedDate'] as Timestamp).toDate().toString().split(' ')[0]
+          : '',
+    );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Member', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),), backgroundColor: Colors.blue),
+      appBar: AppBar(
+        title: Text(
+          memberId != null ? 'Edit Member' : 'Add Member',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.blue,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
@@ -42,18 +62,13 @@ class AddMemberScreen extends StatelessWidget {
                 final address = addressCtl.text.trim();
                 final dateText = dateCtl.text.trim();
 
-                // Basic validation
                 if (name.isEmpty || phone.isEmpty || address.isEmpty || dateText.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('All fields are required.'),
-                      backgroundColor: Colors.red,
-                    ),
+                    const SnackBar(content: Text('All fields are required'), backgroundColor: Colors.red),
                   );
                   return;
                 }
 
-                // Date parsing
                 DateTime? parsedDate;
                 try {
                   parsedDate = DateTime.parse(dateText);
@@ -67,23 +82,24 @@ class AddMemberScreen extends StatelessWidget {
                   return;
                 }
 
-                try {
-                  await FirebaseFirestore.instance.collection('members').add({
-                    'name': name,
-                    'phone': phone,
-                    'address': address,
-                    'joinedDate': Timestamp.fromDate(parsedDate),
-                  });
+                final data = {
+                  'name': name,
+                  'phone': phone,
+                  'address': address,
+                  'joinedDate': Timestamp.fromDate(parsedDate),
+                  'familyId': familyId, // ✅ Always set this
+                };
 
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('✅ Member added successfully')),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to add member: $e')),
-                  );
+                if (memberId != null) {
+                  await FirebaseFirestore.instance.collection('members').doc(memberId).update(data);
+                } else {
+                  await FirebaseFirestore.instance.collection('members').add(data);
                 }
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Member saved successfully')),
+                );
               },
               child: const Text('Save'),
             ),

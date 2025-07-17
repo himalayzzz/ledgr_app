@@ -1,12 +1,12 @@
 // main.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:ledgr/screens/add_member_screen.dart';
 import 'firebase_options.dart';
 import 'screens/accounts_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/event_detail_screen.dart';
 import 'screens/login_screen.dart';
-import 'screens/add_member_screen.dart';
 import 'screens/view_records_screen.dart';
 
 
@@ -43,7 +43,6 @@ class MainApp extends StatelessWidget {
       ),
       routes: {
         '/home': (context) => const HomeScreen(),
-        '/add-member': (context) => const AddMemberScreen(),
         '/accounts': (context) => const AccountsScreen(),
         '/event-detail': (context) => const EventDetailScreen(
               eventId: 'example123',

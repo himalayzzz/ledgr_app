@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ledgr/screens/add_family_screen.dart';
+import 'package:ledgr/screens/add_member_screen.dart';
+import 'package:ledgr/screens/accounts_screen.dart';
+import 'package:ledgr/screens/view_records_screen.dart';
+import 'package:uuid/uuid.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -10,252 +15,216 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final membersCol = FirebaseFirestore.instance.collection('members');
+  String searchQuery = '';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF1F6F9),
       appBar: AppBar(
-        title: const Text(
-          'Ledgr - Dashboard',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.blue,
+        title: const Text('Ledgr Dashboard'),
+        backgroundColor: const Color(0xFF394867),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
           children: [
-            const Text('Quick Actions',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 16.0,
-              runSpacing: 16.0,
-              children: const [
-                _ActionButton(label: 'Add Member', icon: Icons.person_add, route: '/add-member'),
-                _ActionButton(label: 'Accounts', icon: Icons.account_balance_wallet, route: '/accounts'),
-                _ActionButton(label: 'View Records', icon: Icons.filter_alt, route: '/view-records'),
-              ],
-            ),
-            const SizedBox(height: 32),
-            const Text('Members',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
+            // ================= Quick Actions Section =================
             Container(
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey.shade300),
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFF9BA4B5),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  const _MemberRowHeader(),
-                  const Divider(height: 0),
-                  StreamBuilder<QuerySnapshot>(
-                    stream: membersCol.orderBy('joinedDate').snapshots(),
-                    builder: (ctx, snap) {
-                      if (snap.connectionState == ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
-                      }
-
-                      if (snap.hasError) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
-                            child: Text(
-                              '❌ Error loading members.',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        );
-                      }
-
-                      if (!snap.hasData || snap.data!.docs.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Center(
-                            child: Text('No members found.'),
-                          ),
-                        );
-                      }
-
-                      final docs = snap.data!.docs;
-
-                      return Column(
-                        children: docs.map((doc) {
-                          final raw = doc.data();
-                          if (raw == null || raw is! Map<String, dynamic>) return const SizedBox();
-
-                          final name = raw['name'] ?? '';
-                          final phone = raw['phone'] ?? '';
-                          final address = raw['address'] ?? '';
-                          final joinedTimestamp = raw['joinedDate'] as Timestamp?;
-                          final date = joinedTimestamp != null
-                              ? joinedTimestamp.toDate().toIso8601String().split('T').first
-                              : '';
-
-                          return _MemberRow(
-                            name: name,
-                            phone: phone,
-                            address: address,
-                            date: date,
-                            onEdit: () => showEditMemberDialog(context, doc),
-                          );
-                        }).toList(),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      final newFamilyId = const Uuid().v4();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => AddMemberScreen(familyId: newFamilyId),
+                        ),
                       );
                     },
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Add Member'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AccountsScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.attach_money),
+                    label: const Text('Accounts'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ViewRecordsScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.list_alt),
+                    label: const Text('View Records'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF394867),
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+
+            // ========== Search Bar ==========
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Search members by name...',
+                  prefixIcon: Icon(Icons.search),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setState(() => searchQuery = value.toLowerCase()),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // ========== Members List ==========
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: membersCol.orderBy('name').snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final docs = snapshot.data!.docs;
+                  final heads = <Map<String, dynamic>>[];
+                  final families = <String, List<Map<String, dynamic>>>{};
+
+                  for (var doc in docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final id = doc.id;
+                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    if (searchQuery.isNotEmpty && !name.contains(searchQuery)) continue;
+
+                    final isFamily = data['isFamily'] ?? false;
+                    final familyId = data['familyId'] ?? '';
+                    data['id'] = id;
+
+                    if (isFamily && familyId.isNotEmpty) {
+                      families.putIfAbsent(familyId, () => []).add(data);
+                    } else {
+                      heads.add(data);
+                    }
+                  }
+
+                  if (heads.isEmpty) {
+                    return const Center(child: Text('No members yet.'));
+                  }
+
+                  return ListView.builder(
+                    itemCount: heads.length,
+                    itemBuilder: (context, index) {
+                      final head = heads[index];
+                      final familyId = head['familyId'] ?? '';
+                      final headName = head['name'] ?? '';
+                      final phone = head['phone'] ?? '';
+                      final joinedDate = (head['joinedDate'] as Timestamp?)?.toDate();
+                      final address = head['address'] ?? '';
+                      final docId = head['id'];
+                      final children = families[familyId] ?? [];
+
+                      return Card(
+                        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: ExpansionTile(
+                          title: Text(headName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text('Phone: $phone\nAddress: $address'),
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit),
+                                  tooltip: 'Edit Member',
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => AddMemberScreen(
+                                          familyId: familyId,
+                                          memberId: docId,
+                                          existingData: head,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.group_add),
+                                  tooltip: 'Add Family Member',
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => AddFamilyMemberScreen(
+                                          familyId: familyId,
+                   
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                
+                              ],
+                            ),
+                            if (children.isNotEmpty) ...[
+                              const Divider(),
+                              const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text('Family Members:', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                              ...children.map((member) {
+                                final memberName = member['name'] ?? '';
+                                final memberPhone = member['phone'] ?? '';
+                                final memberAddress = member['address'] ?? '';
+                                final joined = (member['joinedDate'] as Timestamp?)?.toDate();
+
+                                return ListTile(
+                                  title: Text(memberName),
+                                  subtitle: Text('Phone: $memberPhone\nAddress: $memberAddress'),
+                                  trailing: Text(joined != null
+                                      ? '${joined.year}-${joined.month.toString().padLeft(2, '0')}-${joined.day.toString().padLeft(2, '0')}'
+                                      : 'N/A'),
+                                );
+                              }).toList(),
+                            ]
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-}
-
-// 🔹 Reusable Action Button
-class _ActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final String route;
-
-  const _ActionButton({
-    required this.label,
-    required this.icon,
-    required this.route,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: () => Navigator.pushNamed(context, route),
-      icon: Icon(icon),
-      label: Text(label),
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size(120, 50),
-        textStyle: const TextStyle(fontSize: 16),
-      ),
-    );
-  }
-}
-
-// 🔹 Table Header
-class _MemberRowHeader extends StatelessWidget {
-  const _MemberRowHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: const [
-        Expanded(child: Text('Name', style: TextStyle(fontWeight: FontWeight.bold))),
-        Expanded(child: Text('Joined Date', style: TextStyle(fontWeight: FontWeight.bold))),
-        Expanded(child: Text('Phone', style: TextStyle(fontWeight: FontWeight.bold))),
-        Expanded(child: Text('Address', style: TextStyle(fontWeight: FontWeight.bold))),
-        SizedBox(width: 50), // Edit button space
-      ],
-    );
-  }
-}
-
-// 🔹 Table Row with Edit
-class _MemberRow extends StatelessWidget {
-  final String name;
-  final String phone;
-  final String date;
-  final String address;
-  final VoidCallback onEdit;
-
-  const _MemberRow({
-    required this.name,
-    required this.date,
-    required this.phone,
-    required this.address,
-    required this.onEdit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(child: Text(name)),
-        Expanded(child: Text(date)),
-        Expanded(child: Text(phone)),
-        Expanded(child: Text(address)),
-        IconButton(
-          icon: const Icon(Icons.edit),
-          onPressed: onEdit,
-        ),
-      ],
-    );
-  }
-}
-
-// 🔹 Edit Member Dialog (Firestore Update)
-void showEditMemberDialog(BuildContext context, QueryDocumentSnapshot doc) {
-  final data = doc.data() as Map<String, dynamic>;
-  final nameCtl = TextEditingController(text: data['name'] ?? '');
-  final phoneCtl = TextEditingController(text: data['phone'] ?? '');
-  final addressCtl = TextEditingController(text: data['address'] ?? '');
-  final dateCtl = TextEditingController(
-    text: (data['joinedDate'] as Timestamp?)
-            ?.toDate()
-            .toIso8601String()
-            .split('T')
-            .first ??
-        '',
-  );
-
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Edit Member'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtl, decoration: const InputDecoration(labelText: 'Name')),
-            TextField(controller: phoneCtl, decoration: const InputDecoration(labelText: 'Phone')),
-            TextField(controller: dateCtl, decoration: const InputDecoration(labelText: 'Joined Date (YYYY-MM-DD)')),
-            TextField(controller: addressCtl, decoration: const InputDecoration(labelText: 'Address')),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: () async {
-            try {
-              final parsedDate = DateTime.tryParse(dateCtl.text);
-              if (parsedDate == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Invalid date format')),
-                );
-                return;
-              }
-
-              await doc.reference.update({
-                'name': nameCtl.text,
-                'phone': phoneCtl.text,
-                'address': addressCtl.text,
-                'joinedDate': Timestamp.fromDate(parsedDate),
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Member details updated.')),
-              );
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Update failed: $e')),
-              );
-            }
-          },
-          child: const Text('Save'),
-        ),
-      ],
-    ),
-  );
 }
