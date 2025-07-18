@@ -1,7 +1,7 @@
 // main.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:ledgr/screens/add_member_screen.dart';
+import 'package:ledgr/screens/change_password_screen.dart';
 import 'firebase_options.dart';
 import 'screens/accounts_screen.dart';
 import 'screens/dashboard_screen.dart';
@@ -50,6 +50,7 @@ class MainApp extends StatelessWidget {
               eventDate: 'June 30, 2025',
             ),
         '/view-records': (context) => const ViewRecordsScreen(),
+        '/change-password': (context) => const ChangePasswordScreen(),
       },
     );
   }

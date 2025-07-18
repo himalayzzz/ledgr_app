@@ -22,8 +22,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F6F9),
       appBar: AppBar(
-        title: const Text('Ledgr Dashboard'),
-        backgroundColor: const Color(0xFF394867),
+        title: const Text('Ledgr Dashboard', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.blue,
       ),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -33,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF9BA4B5),
+                color: const Color.fromARGB(255, 158, 234, 236),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -80,7 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     icon: const Icon(Icons.list_alt),
                     label: const Text('View Records'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF394867),
+                      backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
                     ),
                   ),

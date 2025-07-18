@@ -172,7 +172,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     return const TableRow(
       decoration: BoxDecoration(color: Color.fromARGB(255, 228, 236, 250)),
       children: [
-        Padding(padding: EdgeInsets.all(8), child: Text('Member')),
+        Padding(padding: EdgeInsets.all(8), child: Text('Member/source')),
         Padding(padding: EdgeInsets.all(8), child: Text('Amount')),
         Padding(padding: EdgeInsets.all(8), child: Text('Type')),
         Padding(padding: EdgeInsets.all(8), child: Text('Description')),
@@ -184,7 +184,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   TableRow _buildDataRow(Map<String, dynamic> row) {
     final amountController = TextEditingController(text: row['amount'].toString());
     final descController = TextEditingController(text: row['description']);
-    final memberController = TextEditingController(text: row['member']);
+    final memberController = TextEditingController(text: row['member/source']);
 
     return TableRow(
       children: [
