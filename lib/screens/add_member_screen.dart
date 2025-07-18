@@ -88,6 +88,7 @@ class AddMemberScreen extends StatelessWidget {
                   'address': address,
                   'joinedDate': Timestamp.fromDate(parsedDate),
                   'familyId': familyId, // ✅ Always set this
+                  'isFamily': false,
                 };
 
                 if (memberId != null) {

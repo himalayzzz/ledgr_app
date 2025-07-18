@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:ledgr/screens/event_detail_screen.dart';
 
 class AccountsScreen extends StatelessWidget {
@@ -49,10 +50,52 @@ class AccountsScreen extends StatelessWidget {
                       final eventTitle = data['title'] ?? '';
                       final eventDate = (data['date'] as Timestamp).toDate();
 
-                      return _EventTile(
-                        eventId: doc.id,
-                        title: eventTitle,
-                        date: eventDate,
+                      return Card(
+                        elevation: 2,
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        child: ListTile(
+                          title: Text(eventTitle,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                            DateFormat('yyyy-MM-dd').format(eventDate),
+                          ),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'edit') {
+                                _showEditEventDialog(
+                                    context, doc.id, eventTitle, eventDate);
+                              } else if (value == 'delete') {
+                                _showDeleteConfirmation(context, doc.id);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Text('Edit'),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Text('Delete'),
+                              ),
+                            ],
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EventDetailScreen(
+                                  eventId: doc.id,
+                                  eventTitle: eventTitle,
+                                  eventDate:
+                                      DateFormat('yyyy-MM-dd').format(eventDate),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       );
                     },
                   );
@@ -120,7 +163,6 @@ class AccountsScreen extends StatelessWidget {
 
                 Navigator.pop(context);
 
-                // Navigate to Event Detail
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -128,7 +170,7 @@ class AccountsScreen extends StatelessWidget {
                       eventId: newEvent.id,
                       eventTitle: title,
                       eventDate:
-                          '${date.year}-${date.month}-${date.day}', // or use intl
+                          DateFormat('yyyy-MM-dd').format(date),
                     ),
                   ),
                 );
@@ -140,37 +182,90 @@ class AccountsScreen extends StatelessWidget {
       },
     );
   }
-}
 
-class _EventTile extends StatelessWidget {
-  final String eventId;
-  final String title;
-  final DateTime date;
+  void _showEditEventDialog(
+      BuildContext context, String eventId, String currentTitle, DateTime currentDate) {
+    final titleController = TextEditingController(text: currentTitle);
+    final dateController =
+        TextEditingController(text: DateFormat('yyyy-MM-dd').format(currentDate));
 
-  const _EventTile({
-    required this.eventId,
-    required this.title,
-    required this.date,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(title),
-      subtitle: Text('${date.year}-${date.month}-${date.day}'),
-      trailing: const Icon(Icons.arrow_forward_ios),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => EventDetailScreen(
-              eventId: eventId,
-              eventTitle: title,
-              eventDate: '${date.year}-${date.month}-${date.day}',
-            ),
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Edit Event'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: 'Title')),
+              TextField(
+                  controller: dateController,
+                  decoration: const InputDecoration(
+                      labelText: 'Date (e.g., 2025-06-30)')),
+            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final title = titleController.text.trim();
+                final dateStr = dateController.text.trim();
+
+                final date = DateTime.tryParse(dateStr);
+                if (title.isEmpty || date == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Invalid input')),
+                  );
+                  return;
+                }
+
+                await FirebaseFirestore.instance
+                    .collection('events')
+                    .doc(eventId)
+                    .update({
+                  'title': title,
+                  'date': Timestamp.fromDate(date),
+                });
+
+                Navigator.pop(context);
+              },
+              child: const Text('Update'),
+            ),
+          ],
         );
       },
+    );
+  }
+
+  void _showDeleteConfirmation(BuildContext context, String eventId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Event'),
+        content: const Text('Are you sure you want to delete this event?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              await FirebaseFirestore.instance
+                  .collection('events')
+                  .doc(eventId)
+                  .delete();
+              Navigator.pop(context);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }

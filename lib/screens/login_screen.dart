@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:ledgr/screens/reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   LoginScreen({super.key});
@@ -133,14 +132,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 40),
                       
                       Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pushNamed(context, '/forgot-password');
-                              },
-                              child: const Text('Forgot Password?', style: TextStyle(color: Colors.blue, fontSize: 16)),
-                            ),
+                        
                             TextButton(
                               onPressed: () {
                                 Navigator.pushNamed(context, '/change-password');
@@ -152,17 +146,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       const SizedBox(height: 20),
 
-                      TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
-                              );
-                            },
-                            child: const Text("Forgot Password?"),
-                          ),
+                      
 
-const SizedBox(height: 20),
                       ElevatedButton(
                         onPressed: () => login(context),
                         style: ElevatedButton.styleFrom(
