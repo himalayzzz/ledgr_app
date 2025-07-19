@@ -4,7 +4,7 @@ import 'package:ledgr/screens/add_family_screen.dart';
 import 'package:ledgr/screens/add_member_screen.dart';
 import 'package:ledgr/screens/accounts_screen.dart';
 import 'package:ledgr/screens/view_records_screen.dart';
-import 'package:uuid/uuid.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -56,11 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   ElevatedButton.icon(
                     onPressed: () {
-                      final newFamilyId = const Uuid().v4();
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => AddMemberScreen(familyId: newFamilyId),
+                          builder: (_) => AddMemberScreen(existingData: null, memberId: null),
                         ),
                       );
                     },
@@ -121,40 +120,41 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-                final docs = snapshot.data!.docs;
-                final heads = <Map<String, dynamic>>[];
-                final families = <String, List<Map<String, dynamic>>>{};
+                  final docs = snapshot.data!.docs;
+                  final heads = <Map<String, dynamic>>[];
+                  final families = <String, List<Map<String, dynamic>>>{};
 
-                for (var doc in docs) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final id = doc.id;
-                  final name = (data['name'] ?? '').toString().toLowerCase();
-                  final isHidden = data['isHidden'] ?? false;
+                  for (var doc in docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final id = doc.id;
+                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    final isHidden = data['isHidden'] ?? false;
 
-                  if (!showHidden && isHidden) continue;
+                    if (!showHidden && isHidden) continue;
 
-                  final isFamily = data['isFamily'] ?? false;
-                  final familyId = data['familyId'] ?? '';
-                  data['id'] = id;
+                    final isFamily = data['isFamily'] ?? false;
+                    final familyId = data['familyId'] ?? '';
+                    data['id'] = id;
 
-                  if (isFamily && familyId.isNotEmpty) {
-                    families.putIfAbsent(familyId, () => []).add(data);
-                  } else {
-                    heads.add(data);
+                    if (isFamily && familyId.isNotEmpty) {
+                      families.putIfAbsent(familyId, () => []).add(data);
+                    } else {
+                      heads.add(data);
+                    }
                   }
-                }
-// Final filtering: keep only heads whose name or a family member's name matches
-                final filteredHeads = heads.where((head) {
-                  final headName = (head['name'] ?? '').toString().toLowerCase();
-                  final familyId = head['familyId'] ?? '';
-                  final familyList = families[familyId] ?? [];
 
-                  final headMatches = headName.contains(searchQuery.toLowerCase());
-                  final familyMatches = familyList.any((member) =>
-                      (member['name'] ?? '').toString().toLowerCase().contains(searchQuery.toLowerCase()));
+                  final filteredHeads = heads.where((head) {
+                    final headName = (head['name'] ?? '').toString().toLowerCase();
+                    final familyId = head['familyId'] ?? '';
+                    final familyList = families[familyId] ?? [];
 
-                  return searchQuery.isEmpty || headMatches || familyMatches;
-                }).toList();
+                    final headMatches = headName.contains(searchQuery.toLowerCase());
+                    final familyMatches = familyList.any((member) =>
+                        (member['name'] ?? '').toString().toLowerCase().contains(searchQuery.toLowerCase()));
+
+                    return searchQuery.isEmpty || headMatches || familyMatches;
+                  }).toList();
+
                   if (filteredHeads.isEmpty) {
                     return const Center(child: Text('No members yet.'));
                   }
@@ -186,8 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => AddFamilyMemberScreen(
-                                          familyId: familyId,
+                                        builder: (_) => AddMemberScreen(
                                           memberId: docId,
                                           existingData: head,
                                         ),
@@ -202,7 +201,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (_) => AddFamilyMemberScreen(familyId: familyId),
+                                        builder: (_) => AddFamilyMemberScreen(
+                                          familyId: familyId,
+                                        ),
                                       ),
                                     );
                                   },
@@ -236,7 +237,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                       ),
                                     );
                                   },
-
                                 ),
                                 IconButton(
                                   icon: Icon(head['isHidden'] == true ? Icons.visibility_off : Icons.visibility),
@@ -284,32 +284,31 @@ class _HomeScreenState extends State<HomeScreen> {
                                       IconButton(
                                         icon: const Icon(Icons.delete),
                                         onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (ctx) => AlertDialog(
-                                            title: const Text('Confirm Deletion'),
-                                            content: const Text('Are you sure you want to delete this member?'),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () => Navigator.pop(ctx),
-                                                child: const Text('Cancel'),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () async {
-                                                  Navigator.pop(ctx);
-                                                  await _deleteMember(docId);
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(content: Text('Member deleted')),
-                                                  );
-                                                },
-                                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                child: const Text('Delete'),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-
+                                          showDialog(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text('Confirm Deletion'),
+                                              content: const Text('Are you sure you want to delete this member?'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(ctx),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                ElevatedButton(
+                                                  onPressed: () async {
+                                                    Navigator.pop(ctx);
+                                                    await _deleteMember(memberId);
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('Member deleted')),
+                                                    );
+                                                  },
+                                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
                                       ),
                                       IconButton(
                                         icon: Icon(member['isHidden'] == true ? Icons.visibility_off : Icons.visibility),
