@@ -63,14 +63,18 @@ class AddMemberScreen extends StatelessWidget {
                     return;
                   }
 
-                  final data = {
-                    'name': name,
-                    'phone': phone,
-                    'address': address,
-                    'joinedDate': Timestamp.fromDate(parsedDate),
-                    'isFamily': false, 
-                     'familyId': const Uuid().v4(), // Always false for AddMember
-                  };
+                 final data = {
+  'name': name,
+  'phone': phone,
+  'address': address,
+  'joinedDate': Timestamp.fromDate(parsedDate),
+  'isFamily': false,
+  'familyId': isEditing
+      ? (existingData?['familyId'] ?? '')
+      : const Uuid().v4(),
+};
+
+
 
                   if (isEditing) {
                     await FirebaseFirestore.instance.collection('members').doc(memberId).update(data);

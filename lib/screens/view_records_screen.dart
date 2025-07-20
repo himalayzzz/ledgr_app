@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ledgr/export_excel.dart';
 
 class ViewRecordsScreen extends StatefulWidget {
   const ViewRecordsScreen({super.key});
@@ -119,10 +120,11 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
         title: const Text('View Records', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.file_download),
-            onPressed: _exportToExcel,
-            tooltip: 'Export to Excel',
-          )
+  icon: Icon(Icons.download),
+  onPressed: () async {
+    await exportFilteredTransactionsToExcel(context, filteredTransactions);
+  },
+),
         ],
       ),
       body: Column(

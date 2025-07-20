@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ledgr/export_excel.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -70,12 +71,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     });
   }
 
-  void _exportData() {
-    // Implement Excel logic later
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Exported (stub).')),
-    );
-  }
+void _exportData() async {
+  await exportEventTransactionsToExcel(context, widget.eventId, widget.eventTitle);
+}
+  
 
   Map<String, double> _calculateTotals(List<Map<String, dynamic>> list) {
     double income = 0;
@@ -118,10 +117,10 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             icon: const Icon(Icons.filter_alt),
           ),
           IconButton(
-            onPressed: _exportData,
-            icon: const Icon(Icons.download),
-            tooltip: 'Export to Excel',
-          ),
+  icon: const Icon(Icons.download),
+  onPressed: _exportData,
+  tooltip: 'Export to Excel',
+)
         ],
       ),
       body: Stack(
