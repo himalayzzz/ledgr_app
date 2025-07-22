@@ -1,1 +1,29 @@
-{"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"accounting-software-903a0","configurations":{"web":"1:620700997033:web:a630ba38df4029896360b8","windows":"1:620700997033:web:2dc3585fe4bf085f6360b8"}}}}},"hosting":{"public":"build/web","ignore":["firebase.json","**/.*","**/node_modules/**"],"rewrites":[{"source":"**","destination":"/index.html"}]}}
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "accounting-software-903a0",
+          "configurations": {
+            "web": "1:620700997033:web:a630ba38df4029896360b8",
+            "windows": "1:620700997033:web:2dc3585fe4bf085f6360b8"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

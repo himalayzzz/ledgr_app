@@ -194,7 +194,7 @@ void _exportData() async {
                   controller: memberController,
                   onChanged: (val) => row['member'] = val,
                   decoration: const InputDecoration(
-                    hintText: 'Member',
+                    hintText: 'Member/Source',
                     border: InputBorder.none,
                   ),
                 )
