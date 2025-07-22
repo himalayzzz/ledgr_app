@@ -21,6 +21,7 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
 
   double totalIncome = 0;
   double totalExpense = 0;
+  Map<String, String> eventNames = {};
 
   @override
   void initState() {
@@ -28,32 +29,40 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
     fetchData();
   }
 
-  Future<void> fetchData() async {
-    // Fetch members
-    final memberSnapshot = await FirebaseFirestore.instance.collection('members').get();
-    members.addAll(memberSnapshot.docs.map((doc) => doc['name'].toString()));
+Future<void> fetchData() async {
+  // Fetch members
+  final memberSnapshot = await FirebaseFirestore.instance.collection('members').get();
+  members.addAll(memberSnapshot.docs.map((doc) => doc['name'].toString()));
 
-    // Fetch transactions across all events
-    final transactionSnapshot = await FirebaseFirestore.instance
-        .collectionGroup('transactions')
-        .get();
-
-    allTransactions = transactionSnapshot.docs.map((doc) {
-      final data = doc.data();
-      return {
-        'member': data['member'],
-        'type': data['type'],
-        'amount': data['amount'],
-        'description': data['description'],
-        'date': (data['timestamp'] as Timestamp).toDate(),
-        'event': doc.reference.parent.parent?.id ?? 'Unknown',
-      };
-    }).toList();
-
-    filteredTransactions = List.from(allTransactions);
-    calculateTotals();
-    setState(() {});
+  // Fetch events
+  final eventSnapshot = await FirebaseFirestore.instance.collection('events').get();
+  for (var doc in eventSnapshot.docs) {
+    eventNames[doc.id] = doc['title']; // Assuming event has a 'title' field
   }
+
+  // Fetch transactions across all events
+  final transactionSnapshot = await FirebaseFirestore.instance.collectionGroup('transactions').get();
+
+  allTransactions = transactionSnapshot.docs.map((doc) {
+    final data = doc.data();
+    final eventId = doc.reference.parent.parent?.id ?? 'Unknown';
+    final eventTitle = eventNames[eventId] ?? 'Unknown Event';
+
+    return {
+      'member': data['member'],
+      'type': data['type'],
+      'amount': data['amount'],
+      'description': data['description'],
+      'date': (data['timestamp'] as Timestamp).toDate(),
+      'event': eventTitle, // Use title instead of ID
+    };
+  }).toList();
+
+  filteredTransactions = List.from(allTransactions);
+  calculateTotals();
+  setState(() {});
+}
+
 
   void calculateTotals() {
     totalIncome = 0;
@@ -82,12 +91,9 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
     });
   }
 
-  void _exportToExcel() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Exported filtered data (stub).")),
-    );
-  }
-
+void _exportToExcel() async {
+  await exportFilteredTransactionsToExcel(context, filteredTransactions);
+}
   void _pickDate() async {
     DateTime? picked = await showDatePicker(
       context: context,
