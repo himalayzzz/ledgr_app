@@ -49,7 +49,7 @@ class AddFamilyMemberScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isEditing ? 'Edit Family Member' : 'Add Family Member',
+          isEditing ? 'JSOC- Edit Family Member' : 'JSOC- Add Family Member',
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.blue,

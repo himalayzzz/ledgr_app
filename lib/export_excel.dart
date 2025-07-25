@@ -27,7 +27,7 @@ Future<void> exportEventTransactionsToExcel(
   final Excel excel = Excel.createExcel();
   final Sheet sheet = excel['Sheet1'];
 
-  final headers = ['Member', 'Amount', 'Type', 'Description', 'Timestamp'];
+  final headers = ['Slno', 'Member', 'Amount', 'Type', 'Description', 'Timestamp'];
   sheet.appendRow(headers);
 
   // Make header row bold
@@ -46,6 +46,7 @@ Future<void> exportEventTransactionsToExcel(
     final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
 
     sheet.appendRow([
+      data['slno'] ?? '', // Serial number, can be empty
       data['member'] ?? '',
       data['amount'] ?? 0, // Number, not string
       data['type'] ?? '',

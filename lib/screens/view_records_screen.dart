@@ -144,7 +144,7 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        title: const Text('View Records', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text(' JSOC View Records', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.download),

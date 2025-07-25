@@ -45,7 +45,7 @@ class AddMemberScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isEditing ? 'Edit Member' : 'Add Member',
+          isEditing ? 'JSOC- Edit Member' : 'JSOC- Add Member',
           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.blue,
