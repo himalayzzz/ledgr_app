@@ -5,7 +5,6 @@ import 'package:ledgr/screens/add_member_screen.dart';
 import 'package:ledgr/screens/accounts_screen.dart';
 import 'package:ledgr/screens/view_records_screen.dart';
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -24,6 +23,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _toggleHideMember(String docId, bool currentHidden) async {
     await membersCol.doc(docId).update({'isHidden': !currentHidden});
+  }
+
+  String formatName(String name) {
+    if (name.isEmpty) return '';
+    return name[0].toUpperCase() + name.substring(1).toLowerCase();
   }
 
   @override
@@ -116,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 8),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: membersCol.orderBy('name').snapshots(),
+                stream: membersCol.snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
@@ -127,7 +131,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   for (var doc in docs) {
                     final data = doc.data() as Map<String, dynamic>;
                     final id = doc.id;
-                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    final nameRaw = (data['name'] ?? '').toString();
+                    final formattedName = formatName(nameRaw);
                     final isHidden = data['isHidden'] ?? false;
 
                     if (!showHidden && isHidden) continue;
@@ -135,6 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     final isFamily = data['isFamily'] ?? false;
                     final familyId = data['familyId'] ?? '';
                     data['id'] = id;
+                    data['name'] = formattedName;
 
                     if (isFamily && familyId.isNotEmpty) {
                       families.putIfAbsent(familyId, () => []).add(data);
@@ -143,14 +149,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                   }
 
+                  heads.sort((a, b) => a['name'].compareTo(b['name']));
+
                   final filteredHeads = heads.where((head) {
                     final headName = (head['name'] ?? '').toString().toLowerCase();
                     final familyId = head['familyId'] ?? '';
                     final familyList = families[familyId] ?? [];
 
-                    final headMatches = headName.contains(searchQuery.toLowerCase());
+                    final headMatches = headName.contains(searchQuery);
                     final familyMatches = familyList.any((member) =>
-                        (member['name'] ?? '').toString().toLowerCase().contains(searchQuery.toLowerCase()));
+                        (member['name'] ?? '').toString().toLowerCase().contains(searchQuery));
 
                     return searchQuery.isEmpty || headMatches || familyMatches;
                   }).toList();
@@ -216,7 +224,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       context: context,
                                       builder: (ctx) => AlertDialog(
                                         title: const Text('Confirm Deletion'),
-                                        content: const Text('Are you sure you want to delete this member?'),
+                                        content: Text('Are you sure you want to delete $headName?'),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.pop(ctx),
@@ -224,10 +232,30 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                           ElevatedButton(
                                             onPressed: () async {
-                                              Navigator.pop(ctx);
-                                              await _deleteMember(docId);
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Member deleted')),
+                                              showDialog(
+                                                context: context,
+                                                builder: (ctx) => AlertDialog(
+                                                  title: const Text('Are you sure?'),
+                                                  content: const Text('This action cannot be undone.'),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(ctx),
+                                                      child: const Text('Cancel'),
+                                                    ),
+                                                    ElevatedButton(
+                                                      onPressed: () async {
+                                                        Navigator.pop(ctx);
+                                                        await _deleteMember(docId);
+                                                        ScaffoldMessenger.of(context).showSnackBar(
+                                                          const SnackBar(content: Text('Member deleted')),
+                                                        );
+                                                        Navigator.pop(context);
+                                                      },
+                                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                      child: const Text('Delete'),
+                                                    ),
+                                                  ],
+                                                ),
                                               );
                                             },
                                             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

@@ -23,7 +23,6 @@ class AccountsScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
 
-            // 🔥 List Events from Firestore
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -60,7 +59,7 @@ class AccountsScreen extends StatelessWidget {
                               style: const TextStyle(
                                   fontWeight: FontWeight.w600)),
                           subtitle: Text(
-                            DateFormat('yyyy-MM-dd').format(eventDate),
+                            DateFormat('dd-MM-yyyy').format(eventDate),
                           ),
                           trailing: PopupMenuButton<String>(
                             onSelected: (value) {
@@ -89,8 +88,8 @@ class AccountsScreen extends StatelessWidget {
                                 builder: (_) => EventDetailScreen(
                                   eventId: doc.id,
                                   eventTitle: eventTitle,
-                                  eventDate:
-                                      DateFormat('yyyy-MM-dd').format(eventDate),
+                                  eventDate: DateFormat('dd-MM-yyyy')
+                                      .format(eventDate),
                                 ),
                               ),
                             );
@@ -130,8 +129,8 @@ class AccountsScreen extends StatelessWidget {
                   decoration: const InputDecoration(labelText: 'Title')),
               TextField(
                   controller: dateController,
-                  decoration: const InputDecoration(
-                      labelText: 'Date (e.g., 2025-06-30)')),
+                  decoration:
+                      const InputDecoration(labelText: 'Date (dd-MM-yyyy)')),
             ],
           ),
           actions: [
@@ -144,36 +143,36 @@ class AccountsScreen extends StatelessWidget {
                 final title = titleController.text.trim();
                 final dateStr = dateController.text.trim();
 
-                if (title.isEmpty || dateStr.isEmpty) return;
+                try {
+                  final date = DateFormat('dd-MM-yyyy').parseStrict(dateStr);
+                  if (title.isEmpty) throw Exception();
 
-                final date = DateTime.tryParse(dateStr);
-                if (date == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid date format')),
-                  );
-                  return;
-                }
+                  final newEvent = await FirebaseFirestore.instance
+                      .collection('events')
+                      .add({
+                    'title': title,
+                    'date': Timestamp.fromDate(date),
+                  });
 
-                final newEvent = await FirebaseFirestore.instance
-                    .collection('events')
-                    .add({
-                  'title': title,
-                  'date': Timestamp.fromDate(date),
-                });
+                  Navigator.pop(context);
 
-                Navigator.pop(context);
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EventDetailScreen(
-                      eventId: newEvent.id,
-                      eventTitle: title,
-                      eventDate:
-                          DateFormat('yyyy-MM-dd').format(date),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EventDetailScreen(
+                        eventId: newEvent.id,
+                        eventTitle: title,
+                        eventDate:
+                            DateFormat('dd-MM-yyyy').format(date),
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } catch (_) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Invalid input. Use dd-MM-yyyy format')),
+                  );
+                }
               },
               child: const Text('Add'),
             ),
@@ -183,11 +182,11 @@ class AccountsScreen extends StatelessWidget {
     );
   }
 
-  void _showEditEventDialog(
-      BuildContext context, String eventId, String currentTitle, DateTime currentDate) {
+  void _showEditEventDialog(BuildContext context, String eventId,
+      String currentTitle, DateTime currentDate) {
     final titleController = TextEditingController(text: currentTitle);
     final dateController =
-        TextEditingController(text: DateFormat('yyyy-MM-dd').format(currentDate));
+        TextEditingController(text: DateFormat('dd-MM-yyyy').format(currentDate));
 
     showDialog(
       context: context,
@@ -202,8 +201,8 @@ class AccountsScreen extends StatelessWidget {
                   decoration: const InputDecoration(labelText: 'Title')),
               TextField(
                   controller: dateController,
-                  decoration: const InputDecoration(
-                      labelText: 'Date (e.g., 2025-06-30)')),
+                  decoration:
+                      const InputDecoration(labelText: 'Date (dd-MM-yyyy)')),
             ],
           ),
           actions: [
@@ -216,23 +215,25 @@ class AccountsScreen extends StatelessWidget {
                 final title = titleController.text.trim();
                 final dateStr = dateController.text.trim();
 
-                final date = DateTime.tryParse(dateStr);
-                if (title.isEmpty || date == null) {
+                try {
+                  final date = DateFormat('dd-MM-yyyy').parseStrict(dateStr);
+                  if (title.isEmpty) throw Exception();
+
+                  await FirebaseFirestore.instance
+                      .collection('events')
+                      .doc(eventId)
+                      .update({
+                    'title': title,
+                    'date': Timestamp.fromDate(date),
+                  });
+
+                  Navigator.pop(context);
+                } catch (_) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid input')),
+                    const SnackBar(
+                        content: Text('Invalid input. Use dd-MM-yyyy format')),
                   );
-                  return;
                 }
-
-                await FirebaseFirestore.instance
-                    .collection('events')
-                    .doc(eventId)
-                    .update({
-                  'title': title,
-                  'date': Timestamp.fromDate(date),
-                });
-
-                Navigator.pop(context);
               },
               child: const Text('Update'),
             ),
@@ -246,8 +247,8 @@ class AccountsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Event'),
-        content: const Text('Are you sure you want to delete this event?'),
+        title: const Text('Confirm Deletion'),
+        content: const Text('Do you want to delete this event?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -256,11 +257,29 @@ class AccountsScreen extends StatelessWidget {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              await FirebaseFirestore.instance
-                  .collection('events')
-                  .doc(eventId)
-                  .delete();
               Navigator.pop(context);
+              final sure = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Are you sure?'),
+                  content: const Text('This action cannot be undone.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('No')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Yes')),
+                  ],
+                ),
+              );
+
+              if (sure == true) {
+                await FirebaseFirestore.instance
+                    .collection('events')
+                    .doc(eventId)
+                    .delete();
+              }
             },
             child: const Text('Delete'),
           ),

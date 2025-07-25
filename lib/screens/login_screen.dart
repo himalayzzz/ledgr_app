@@ -10,7 +10,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController emailController = TextEditingController();
-
   final TextEditingController passwordController = TextEditingController();
 
   void login(BuildContext context) async {
@@ -44,9 +43,9 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             colors: [
-              Colors.blue,
-              Color.fromARGB(255, 13, 97, 241),
-              Color.fromARGB(255, 3, 56, 146),
+              Color.fromARGB(255, 2, 137, 247),
+              Color.fromARGB(255, 1, 54, 146),
+              Color.fromARGB(255, 0, 23, 61),
             ],
           ),
         ),
@@ -54,15 +53,55 @@ class _LoginScreenState extends State<LoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 10),
+
+            // Updated Header
             Padding(
-              padding: const EdgeInsets.all(5),
-              child: Image.asset(
-                'assets/ledgr.png',
-                height: 150,
-                width: 500,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left Text
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Text(
+                        'St.Joseph\nJacobite Syrian\nOrthodox Church',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.left,
+                      ),
+                    ),
+                  ),
+
+                  // Center Image 
+                  SizedBox(
+                    width: 400,
+                    height: 150,
+                    child: Image.asset('assets/ledgr.png', fit: BoxFit.contain),
+                  ),
+
+                  // Right Text
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: Text(
+                        'Redditch,\nWest Midlands,\nUnited Kingdom',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 23,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
+            // Login Form Section
             Expanded(
               child: Container(
                 decoration: const BoxDecoration(
@@ -130,24 +169,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 40),
-                      
                       Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                        
-                            TextButton(
-                              onPressed: () {
-                                Navigator.pushNamed(context, '/change-password');
-                              },
-                              child: const Text('Change Password?', style: TextStyle(color: Colors.blue, fontSize: 16)),
-                            ),
-                          ],
-                        ),
-
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/change-password');
+                            },
+                            child: const Text('Change Password?', style: TextStyle(color: Colors.blue, fontSize: 16)),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 20),
-
-                      
-
                       ElevatedButton(
                         onPressed: () => login(context),
                         style: ElevatedButton.styleFrom(

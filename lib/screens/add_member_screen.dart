@@ -8,14 +8,35 @@ class AddMemberScreen extends StatelessWidget {
 
   const AddMemberScreen({super.key, this.memberId, this.existingData});
 
+  String formatDateToDDMMYYYY(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$day-$month-$year';
+  }
+
+  DateTime? parseDDMMYYYY(String input) {
+    try {
+      final parts = input.split('-');
+      if (parts.length != 3) return null;
+      final day = int.parse(parts[0]);
+      final month = int.parse(parts[1]);
+      final year = int.parse(parts[2]);
+      return DateTime(year, month, day);
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final nameCtl = TextEditingController(text: existingData?['name'] ?? '');
     final phoneCtl = TextEditingController(text: existingData?['phone'] ?? '');
     final addressCtl = TextEditingController(text: existingData?['address'] ?? '');
+
     final dateCtl = TextEditingController(
       text: existingData?['joinedDate'] != null
-          ? (existingData!['joinedDate'] as Timestamp).toDate().toString().split(' ')[0]
+          ? formatDateToDDMMYYYY((existingData!['joinedDate'] as Timestamp).toDate())
           : '',
     );
 
@@ -37,7 +58,10 @@ class AddMemberScreen extends StatelessWidget {
               TextField(controller: nameCtl, decoration: const InputDecoration(labelText: 'Name')),
               TextField(controller: phoneCtl, decoration: const InputDecoration(labelText: 'Phone')),
               TextField(controller: addressCtl, decoration: const InputDecoration(labelText: 'Address')),
-              TextField(controller: dateCtl, decoration: const InputDecoration(labelText: 'Joined Date (YYYY-MM-DD)')),
+              TextField(
+                controller: dateCtl,
+                decoration: const InputDecoration(labelText: 'Joined Date (DD-MM-YYYY)'),
+              ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
@@ -53,28 +77,24 @@ class AddMemberScreen extends StatelessWidget {
                     return;
                   }
 
-                  DateTime? parsedDate;
-                  try {
-                    parsedDate = DateTime.parse(date);
-                  } catch (_) {
+                  final parsedDate = parseDDMMYYYY(date);
+                  if (parsedDate == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Invalid date format')),
+                      const SnackBar(content: Text('Invalid date format. Use DD-MM-YYYY')),
                     );
                     return;
                   }
 
-                 final data = {
-  'name': name,
-  'phone': phone,
-  'address': address,
-  'joinedDate': Timestamp.fromDate(parsedDate),
-  'isFamily': false,
-  'familyId': isEditing
-      ? (existingData?['familyId'] ?? '')
-      : const Uuid().v4(),
-};
-
-
+                  final data = {
+                    'name': name,
+                    'phone': phone,
+                    'address': address,
+                    'joinedDate': Timestamp.fromDate(parsedDate),
+                    'isFamily': false,
+                    'familyId': isEditing
+                        ? (existingData?['familyId'] ?? '')
+                        : const Uuid().v4(),
+                  };
 
                   if (isEditing) {
                     await FirebaseFirestore.instance.collection('members').doc(memberId).update(data);

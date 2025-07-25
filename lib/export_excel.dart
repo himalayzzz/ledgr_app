@@ -27,7 +27,19 @@ Future<void> exportEventTransactionsToExcel(
   final Excel excel = Excel.createExcel();
   final Sheet sheet = excel['Sheet1'];
 
-  sheet.appendRow(['Member', 'Amount', 'Type', 'Description', 'Timestamp']);
+  final headers = ['Member', 'Amount', 'Type', 'Description', 'Timestamp'];
+  sheet.appendRow(headers);
+
+  // Make header row bold
+  final CellStyle headerStyle = CellStyle(
+    bold: true,
+    fontFamily: getFontFamily(FontFamily.Arial),
+  );
+  for (int col = 0; col < headers.length; col++) {
+    sheet
+        .cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0))
+        .cellStyle = headerStyle;
+  }
 
   for (final doc in snapshot.docs) {
     final data = doc.data();
@@ -35,7 +47,7 @@ Future<void> exportEventTransactionsToExcel(
 
     sheet.appendRow([
       data['member'] ?? '',
-      data['amount']?.toString() ?? '0',
+      data['amount'] ?? 0, // Number, not string
       data['type'] ?? '',
       data['description'] ?? '',
       timestamp?.toString() ?? 'Unknown',
@@ -64,19 +76,24 @@ Future<void> exportFilteredTransactionsToExcel(
   final Excel excel = Excel.createExcel();
   final Sheet sheet = excel['Sheet1'];
 
-  sheet.appendRow([
-    'Member',
-    'Amount',
-    'Type',
-    'Description',
-    'Event',
-    'Date',
-  ]);
+  final headers = ['Member', 'Amount', 'Type', 'Description', 'Event', 'Date'];
+  sheet.appendRow(headers);
+
+  // Bold header row
+  final CellStyle headerStyle = CellStyle(
+    bold: true,
+    fontFamily: getFontFamily(FontFamily.Arial),
+  );
+  for (int col = 0; col < headers.length; col++) {
+    sheet
+        .cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0))
+        .cellStyle = headerStyle;
+  }
 
   for (final txn in filteredTransactions) {
     sheet.appendRow([
       txn['member'] ?? '',
-      txn['amount']?.toString() ?? '0',
+      txn['amount'] ?? 0, // Keep as number
       txn['type'] ?? '',
       txn['description'] ?? '',
       txn['event'] ?? '',

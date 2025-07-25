@@ -71,10 +71,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     });
   }
 
-void _exportData() async {
-  await exportEventTransactionsToExcel(context, widget.eventId, widget.eventTitle);
-}
-  
+  void _exportData() async {
+    await exportEventTransactionsToExcel(context, widget.eventId, widget.eventTitle);
+  }
 
   Map<String, double> _calculateTotals(List<Map<String, dynamic>> list) {
     double income = 0;
@@ -117,10 +116,10 @@ void _exportData() async {
             icon: const Icon(Icons.filter_alt),
           ),
           IconButton(
-  icon: const Icon(Icons.download),
-  onPressed: _exportData,
-  tooltip: 'Export to Excel',
-)
+            icon: const Icon(Icons.download),
+            onPressed: _exportData,
+            tooltip: 'Export to Excel',
+          )
         ],
       ),
       body: Stack(
@@ -154,15 +153,16 @@ void _exportData() async {
     return Table(
       border: TableBorder.all(color: Colors.grey),
       columnWidths: const {
-        0: FlexColumnWidth(2),
+        0: FlexColumnWidth(1), // Sl. No.
         1: FlexColumnWidth(2),
         2: FlexColumnWidth(2),
-        3: FlexColumnWidth(3),
-        4: FlexColumnWidth(2),
+        3: FlexColumnWidth(2),
+        4: FlexColumnWidth(3),
+        5: FlexColumnWidth(2),
       },
       children: [
         _buildHeaderRow(),
-        ...data.map((row) => _buildDataRow(row)).toList(),
+        for (int i = 0; i < data.length; i++) _buildDataRow(i + 1, data[i]),
       ],
     );
   }
@@ -171,22 +171,24 @@ void _exportData() async {
     return const TableRow(
       decoration: BoxDecoration(color: Color.fromARGB(255, 228, 236, 250)),
       children: [
-        Padding(padding: EdgeInsets.all(8), child: Text('Member/source')),
-        Padding(padding: EdgeInsets.all(8), child: Text('Amount')),
-        Padding(padding: EdgeInsets.all(8), child: Text('Type')),
-        Padding(padding: EdgeInsets.all(8), child: Text('Description')),
-        Padding(padding: EdgeInsets.all(8), child: Text('Actions')),
+        Padding(padding: EdgeInsets.all(8), child: Text('Sl. No.', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Member/Source', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Amount', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Type', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Description', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
       ],
     );
   }
 
-  TableRow _buildDataRow(Map<String, dynamic> row) {
+  TableRow _buildDataRow(int index, Map<String, dynamic> row) {
     final amountController = TextEditingController(text: row['amount'].toString());
     final descController = TextEditingController(text: row['description']);
-    final memberController = TextEditingController(text: row['member/source']);
+    final memberController = TextEditingController(text: row['member']);
 
     return TableRow(
       children: [
+        Padding(padding: const EdgeInsets.all(8), child: Text('$index')),
         Padding(
           padding: const EdgeInsets.all(8),
           child: row['isCustom'] == true
@@ -206,7 +208,10 @@ void _exportData() async {
             controller: amountController,
             keyboardType: TextInputType.number,
             onChanged: (val) => row['amount'] = val,
-            decoration: const InputDecoration(border: InputBorder.none),
+            decoration: const InputDecoration(
+              prefixText: '£ ',
+              border: InputBorder.none,
+            ),
           ),
         ),
         Padding(
@@ -275,17 +280,45 @@ void _exportData() async {
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red),
                 onPressed: () async {
-                  if (row['fromFirestore'] == true) {
-                    await FirebaseFirestore.instance
-                        .collection('events')
-                        .doc(widget.eventId)
-                        .collection('transactions')
-                        .doc(row['id'])
-                        .delete();
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Confirm Deletion?'),
+                      content: const Text('Do you want to delete this entry?'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    final sure = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Are you sure?'),
+                        content: const Text('This action cannot be undone.'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No')),
+                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes')),
+                        ],
+                      ),
+                    );
+
+                    if (sure == true) {
+                      if (row['fromFirestore'] == true) {
+                        await FirebaseFirestore.instance
+                            .collection('events')
+                            .doc(widget.eventId)
+                            .collection('transactions')
+                            .doc(row['id'])
+                            .delete();
+                      }
+                      setState(() {
+                        transactions.remove(row);
+                      });
+                    }
                   }
-                  setState(() {
-                    transactions.remove(row);
-                  });
                 },
               ),
             ],
@@ -300,9 +333,9 @@ void _exportData() async {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(thickness: 1),
-        Text('Total Income: ₹${totals['income']?.toStringAsFixed(2) ?? '0'}',
+        Text('Total Income: £${totals['income']?.toStringAsFixed(2) ?? '0'}',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        Text('Total Expense: ₹${totals['expense']?.toStringAsFixed(2) ?? '0'}',
+        Text('Total Expense: £${totals['expense']?.toStringAsFixed(2) ?? '0'}',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
