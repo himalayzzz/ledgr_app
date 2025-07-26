@@ -4,6 +4,7 @@ import 'package:ledgr/screens/add_family_screen.dart';
 import 'package:ledgr/screens/add_member_screen.dart';
 import 'package:ledgr/screens/accounts_screen.dart';
 import 'package:ledgr/screens/view_records_screen.dart';
+import 'package:ledgr/export_excel.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,19 +31,95 @@ class _HomeScreenState extends State<HomeScreen> {
     return name[0].toUpperCase() + name.substring(1).toLowerCase();
   }
 
+  // New function to prepare data for export
+  List<Map<String, dynamic>> _prepareMembersForExport(List<DocumentSnapshot> docs) {
+    final List<Map<String, dynamic>> allMembers = [];
+    final Map<String, List<Map<String, dynamic>>> families = {};
+
+    for (var doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final id = doc.id;
+      final nameRaw = (data['name'] ?? '').toString();
+      final formattedName = formatName(nameRaw);
+      final isHidden = data['isHidden'] ?? false;
+      final isFamily = data['isFamily'] ?? false;
+      final familyId = data['familyId'] ?? '';
+
+      data['id'] = id;
+      data['name'] = formattedName;
+      data['isFamily'] = isFamily; // Ensure these are explicitly added to data map
+      data['familyId'] = familyId;
+      data['isHidden'] = isHidden;
+
+      if (isFamily && familyId.isNotEmpty) {
+        families.putIfAbsent(familyId, () => []).add(data);
+      } else {
+        allMembers.add(data); // Add head of family or independent members
+      }
+    }
+
+    // Now, add family members under their respective heads in the export list
+    // This part ensures a flat list for Excel but conceptually groups them.
+    // The exportMembersToExcel function will handle the actual row appending.
+    final List<Map<String, dynamic>> exportList = [];
+    int slno = 1;
+
+    // First add all independent members and family heads
+    for (var member in allMembers) {
+      if (! (member['isFamily'] ?? false)) { // Independent member
+        exportList.add({
+          'Slno': slno++,
+          ...member,
+        });
+      } else if ((member['isFamily'] ?? false) && (member['familyId'] ?? '').isEmpty) { // Head of family (if explicitly marked and no familyId)
+        exportList.add({
+          'Slno': slno++,
+          ...member,
+        });
+      }
+    }
+
+    // Now, go through the heads and add their family members
+    for (var head in allMembers.where((m) => (m['isFamily'] ?? false) && (m['familyId'] ?? '').isNotEmpty)) {
+      exportList.add({
+        'Slno': slno++,
+        ...head,
+      });
+      final membersOfFamily = families[head['familyId']] ?? [];
+      for (var familyMember in membersOfFamily) {
+        exportList.add({
+          'Slno': slno++,
+          ...familyMember,
+        });
+      }
+    }
+    return exportList;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F6F9),
       appBar: AppBar(
-        title: const Text('Ledgr Dashboard- JSOC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('Ledgr Dashboard- St. Joseph JSOC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.blue,
         actions: [
           IconButton(
             icon: Icon(showHidden ? Icons.visibility_off : Icons.visibility),
             tooltip: showHidden ? 'Hide Hidden Members' : 'Show Hidden Members',
             onPressed: () => setState(() => showHidden = !showHidden),
-          )
+          ),
+          // New download button
+          IconButton(
+            icon: const Icon(Icons.download),
+            tooltip: 'Download Members Data',
+            onPressed: () async {
+              final snapshot = await membersCol.get();
+              final membersToExport = _prepareMembersForExport(snapshot.docs);
+              
+              exportMembersToExcel(context, membersToExport);
+            },
+          ),
         ],
       ),
       body: Padding(
@@ -232,6 +309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ),
                                           ElevatedButton(
                                             onPressed: () async {
+                                              Navigator.pop(ctx);
                                               showDialog(
                                                 context: context,
                                                 builder: (ctx) => AlertDialog(
@@ -249,7 +327,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                                         ScaffoldMessenger.of(context).showSnackBar(
                                                           const SnackBar(content: Text('Member deleted')),
                                                         );
-                                                        Navigator.pop(context);
                                                       },
                                                       style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                                                       child: const Text('Delete'),
@@ -310,55 +387,54 @@ class _HomeScreenState extends State<HomeScreen> {
                                         },
                                       ),
                                       IconButton(
-  icon: const Icon(Icons.delete),
-  onPressed: () {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Confirm Deletion'),
-        content: const Text('Are you sure you want to delete this member?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Are you really sure?'),
-                  content: const Text('This action cannot be undone.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        Navigator.pop(ctx);
-                        await _deleteMember(memberId);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Member deleted')),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: const Text('Delete'),
-                    ),
-                  ],
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  },
-),
-
+                                        icon: const Icon(Icons.delete),
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (ctx) => AlertDialog(
+                                              title: const Text('Confirm Deletion'),
+                                              content: const Text('Are you sure you want to delete this member?'),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(ctx),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                ElevatedButton(
+                                                  onPressed: () {
+                                                    Navigator.pop(ctx);
+                                                    showDialog(
+                                                      context: context,
+                                                      builder: (ctx) => AlertDialog(
+                                                        title: const Text('Are you really sure?'),
+                                                        content: const Text('This action cannot be undone.'),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed: () => Navigator.pop(ctx),
+                                                            child: const Text('Cancel'),
+                                                          ),
+                                                          ElevatedButton(
+                                                            onPressed: () async {
+                                                              Navigator.pop(ctx);
+                                                              await _deleteMember(memberId);
+                                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                                const SnackBar(content: Text('Member deleted')),
+                                                              );
+                                                            },
+                                                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                            child: const Text('Delete'),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                                  child: const Text('Delete'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
                                       IconButton(
                                         icon: Icon(member['isHidden'] == true ? Icons.visibility_off : Icons.visibility),
                                         onPressed: () => _toggleHideMember(memberId, member['isHidden'] ?? false),
