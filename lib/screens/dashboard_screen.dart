@@ -310,34 +310,55 @@ class _HomeScreenState extends State<HomeScreen> {
                                         },
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete),
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (ctx) => AlertDialog(
-                                              title: const Text('Confirm Deletion'),
-                                              content: const Text('Are you sure you want to delete this member?'),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () => Navigator.pop(ctx),
-                                                  child: const Text('Cancel'),
-                                                ),
-                                                ElevatedButton(
-                                                  onPressed: () async {
-                                                    Navigator.pop(ctx);
-                                                    await _deleteMember(memberId);
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('Member deleted')),
-                                                    );
-                                                  },
-                                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                  child: const Text('Delete'),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                      ),
+  icon: const Icon(Icons.delete),
+  onPressed: () {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Confirm Deletion'),
+        content: const Text('Are you sure you want to delete this member?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Are you really sure?'),
+                  content: const Text('This action cannot be undone.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await _deleteMember(memberId);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Member deleted')),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      child: const Text('Delete'),
+                    ),
+                  ],
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  },
+),
+
                                       IconButton(
                                         icon: Icon(member['isHidden'] == true ? Icons.visibility_off : Icons.visibility),
                                         onPressed: () => _toggleHideMember(memberId, member['isHidden'] ?? false),
