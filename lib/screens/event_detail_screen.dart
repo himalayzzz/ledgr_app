@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:ledgr/export_excel.dart';
 
 class EventDetailScreen extends StatefulWidget {
@@ -46,6 +47,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           'type': data['type'] ?? 'Income',
           'description': data['description'] ?? '',
           'timestamp': (data['timestamp'] as Timestamp).toDate(),
+          'lastModifiedBy': data['lastModifiedBy'] ?? '',
           'fromFirestore': true,
         };
       }).toList();
@@ -67,6 +69,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         'description': '',
         'timestamp': DateTime.now(),
         'isCustom': true,
+        'lastModifiedBy': '',
       });
     });
   }
@@ -154,11 +157,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       border: TableBorder.all(color: Colors.grey),
       columnWidths: const {
         0: FlexColumnWidth(1), // Sl. No.
-        1: FlexColumnWidth(2),
-        2: FlexColumnWidth(2),
-        3: FlexColumnWidth(2),
-        4: FlexColumnWidth(3),
-        5: FlexColumnWidth(2),
+        1: FlexColumnWidth(2), // Member/Source
+        2: FlexColumnWidth(2), // Amount
+        3: FlexColumnWidth(1.5), // Type
+        4: FlexColumnWidth(2.5), // Description
+        5: FlexColumnWidth(2), // Last Modified By
+        6: FlexColumnWidth(2), // Actions
       },
       children: [
         _buildHeaderRow(),
@@ -176,6 +180,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         Padding(padding: EdgeInsets.all(8), child: Text('Amount', style: TextStyle(fontWeight: FontWeight.bold))),
         Padding(padding: EdgeInsets.all(8), child: Text('Type', style: TextStyle(fontWeight: FontWeight.bold))),
         Padding(padding: EdgeInsets.all(8), child: Text('Description', style: TextStyle(fontWeight: FontWeight.bold))),
+        Padding(padding: EdgeInsets.all(8), child: Text('Last Modified By', style: TextStyle(fontWeight: FontWeight.bold))),
         Padding(padding: EdgeInsets.all(8), child: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
       ],
     );
@@ -240,6 +245,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         ),
         Padding(
           padding: const EdgeInsets.all(8),
+          child: Text(
+            row['lastModifiedBy'] ?? '',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8),
           child: Row(
             children: [
               IconButton(
@@ -257,6 +269,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       'type': row['type'],
                       'description': row['description'],
                       'timestamp': Timestamp.now(),
+                      'eventId': widget.eventId,
+                      'eventTitle': widget.eventTitle,
+                      'eventDate': widget.eventDate,
                     });
                   } else {
                     final doc = await ref.add({
@@ -265,6 +280,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       'type': row['type'],
                       'description': row['description'],
                       'timestamp': Timestamp.now(),
+                      'eventId': widget.eventId,
+                      'eventTitle': widget.eventTitle,
+                      'eventDate': widget.eventDate,
                     });
                     setState(() {
                       row['id'] = doc.id;

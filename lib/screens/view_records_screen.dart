@@ -35,6 +35,7 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
       final eventId = eventDoc.id;
       final eventTitle = eventData['title'] ?? 'Untitled';
       final eventDate = (eventData['date'] as Timestamp).toDate();
+      final eventType = eventData['type'] ?? 'main';
 
       final transactionsSnapshot = await FirebaseFirestore.instance
           .collection('events')
@@ -46,8 +47,17 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
         final txnData = txn.data();
         txnData['eventTitle'] = eventTitle;
         txnData['eventDate'] = eventDate;
+        txnData['eventType'] = eventType;
         txnData['timestamp'] = txnData['timestamp']; // Add the original timestamp
         txnData['id'] = txn.id;
+        txnData['eventId'] = eventId;
+        
+        // Add main event info for sub events
+        if (eventType == 'sub' && eventData['mainEventTitle'] != null) {
+          txnData['mainEventTitle'] = eventData['mainEventTitle'];
+          txnData['eventTitle'] = '${eventData['mainEventTitle']} - $eventTitle';
+        }
+        
         transactionsList.add(txnData);
       }
     }
@@ -141,7 +151,7 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue,
-        title: const Text('JSOC View Records', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: const Text('St. Jospeh JSOC- View Records', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.download, color: Colors.white),
@@ -396,6 +406,8 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
                     itemBuilder: (context, index) {
                       final txn = filteredTransactions[index];
                       final isIncome = txn['type'] == 'Income';
+                      final eventType = txn['eventType'] ?? 'main';
+                      
                       return Card(
                         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         color: isIncome ? Colors.green[50] : Colors.red[50],
@@ -406,12 +418,28 @@ class _ViewRecordsScreenState extends State<ViewRecordsScreen> {
                             backgroundColor: isIncome ? Colors.green : Colors.red,
                             child: Icon(isIncome ? Icons.arrow_downward : Icons.arrow_upward, color: Colors.white),
                           ),
-                          title: Text(
-                            "${txn['type']}: £${txn['amount']}",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isIncome ? Colors.green[900] : Colors.red[900],
-                            ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  "${txn['type']}: £${txn['amount']}",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isIncome ? Colors.green[900] : Colors.red[900],
+                                  ),
+                                ),
+                              ),
+                              if (eventType == 'sub')
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text('SUB',
+                                      style: TextStyle(color: Colors.white, fontSize: 10)),
+                                ),
+                            ],
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
