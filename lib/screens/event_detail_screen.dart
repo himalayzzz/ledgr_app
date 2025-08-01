@@ -257,6 +257,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               IconButton(
                 icon: const Icon(Icons.save, color: Colors.green),
                 onPressed: () async {
+                  final currentUser = FirebaseAuth.instance.currentUser;
+                  final userEmail = currentUser?.email ?? 'unknown@example.com';
+
                   final ref = FirebaseFirestore.instance
                       .collection('events')
                       .doc(widget.eventId)
@@ -272,6 +275,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       'eventId': widget.eventId,
                       'eventTitle': widget.eventTitle,
                       'eventDate': widget.eventDate,
+                      'lastModifiedBy': userEmail,
                     });
                   } else {
                     final doc = await ref.add({
@@ -283,10 +287,12 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
                       'eventId': widget.eventId,
                       'eventTitle': widget.eventTitle,
                       'eventDate': widget.eventDate,
+                      'lastModifiedBy': userEmail,
                     });
                     setState(() {
                       row['id'] = doc.id;
                       row['fromFirestore'] = true;
+                      row['lastModifiedBy'] = userEmail;
                     });
                   }
 

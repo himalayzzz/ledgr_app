@@ -133,9 +133,7 @@ Future<void> exportFilteredTransactionsToExcel(
   }
 }
 
-// Export all members to Excel
-
-
+/// Export all members to Excel with proper family structure
 Future<void> exportMembersToExcel(BuildContext context, List<Map<String, dynamic>> members) async {
   if (members.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -146,14 +144,14 @@ Future<void> exportMembersToExcel(BuildContext context, List<Map<String, dynamic
 
   try {
     final Excel excel = Excel.createExcel();
+    
+    // Remove the default 'Sheet1' that gets created automatically
+    excel.delete('Sheet1');
+    
+    // Create our custom sheet
     const sheetName = 'Members';
-    final Sheet? sheet = excel[sheetName];
-if (sheet == null) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Could not create Excel sheet.')),
-  );
-  return;
-}
+    excel[sheetName]; // This creates the sheet
+    final Sheet sheet = excel[sheetName];
 
     // Add headers
     final headers = ['Sl. No.', 'Name', 'Phone', 'Address', 'Role'];
@@ -163,14 +161,43 @@ if (sheet == null) {
           .value = headers[i];
     }
 
-    // Add member rows
-    for (int i = 0; i < members.length; i++) {
-      final member = members[i];
-      final rowIndex = i + 1;
+    // Style headers
+    final CellStyle headerStyle = CellStyle(
+      bold: true,
+      fontFamily: getFontFamily(FontFamily.Arial),
+    );
+    for (int col = 0; col < headers.length; col++) {
+      sheet
+          .cell(CellIndex.indexByColumnRow(columnIndex: col, rowIndex: 0))
+          .cellStyle = headerStyle;
+    }
 
+    // Group members by family
+    final Map<String, List<Map<String, dynamic>>> families = {};
+    final List<Map<String, dynamic>> independentMembers = [];
+
+    for (final member in members) {
+      final isFamily = member['isFamily'] ?? false;
+      final familyId = member['familyId'] ?? '';
+
+      if (isFamily && familyId.isNotEmpty) {
+        families.putIfAbsent(familyId, () => []).add(member);
+      } else {
+        independentMembers.add(member);
+      }
+    }
+
+    // Sort independent members by name
+    independentMembers.sort((a, b) => (a['name'] ?? '').compareTo(b['name'] ?? ''));
+
+    int rowIndex = 1;
+    int slno = 1;
+
+    // Add independent members first
+    for (final member in independentMembers) {
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex))
-          .value = '${i + 1}'; // Sl. No.
+          .value = slno++;
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex))
           .value = member['name'] ?? '';
@@ -182,7 +209,65 @@ if (sheet == null) {
           .value = member['address'] ?? '';
       sheet
           .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex))
-          .value = (member['isFamily'] == true) ? 'Family Member' : 'Main Member';
+          .value = 'Main Member';
+      
+      rowIndex++;
+
+      // Add family members if this is a family head
+      final familyId = member['familyId'] ?? '';
+      if (familyId.isNotEmpty && families.containsKey(familyId)) {
+        final familyMembers = families[familyId]!;
+        familyMembers.sort((a, b) => (a['name'] ?? '').compareTo(b['name'] ?? ''));
+        
+        for (final familyMember in familyMembers) {
+          sheet
+              .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex))
+              .value = slno++;
+          sheet
+              .cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex))
+              .value = '  ${familyMember['name'] ?? ''}'; // Indent family members
+          sheet
+              .cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex))
+              .value = familyMember['phone'] ?? '';
+          sheet
+              .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex))
+              .value = familyMember['address'] ?? '';
+          sheet
+              .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex))
+              .value = 'Family Member';
+          
+          rowIndex++;
+        }
+        
+        // Remove this family from the map so we don't process it again
+        families.remove(familyId);
+      }
+    }
+
+    // Add any remaining family members that weren't linked to a head
+    for (final familyId in families.keys) {
+      final familyMembers = families[familyId]!;
+      familyMembers.sort((a, b) => (a['name'] ?? '').compareTo(b['name'] ?? ''));
+      
+      for (final familyMember in familyMembers) {
+        sheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex))
+            .value = slno++;
+        sheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex))
+            .value = familyMember['name'] ?? '';
+        sheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex))
+            .value = familyMember['phone'] ?? '';
+        sheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex))
+            .value = familyMember['address'] ?? '';
+        sheet
+            .cell(CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex))
+            .value = 'Family Member';
+        
+        rowIndex++;
+      }
     }
 
     final List<int>? bytes = excel.encode();

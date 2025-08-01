@@ -31,10 +31,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return name[0].toUpperCase() + name.substring(1).toLowerCase();
   }
 
-  // New function to prepare data for export
+  // Fixed function to prepare data for export
   List<Map<String, dynamic>> _prepareMembersForExport(List<DocumentSnapshot> docs) {
     final List<Map<String, dynamic>> allMembers = [];
-    final Map<String, List<Map<String, dynamic>>> families = {};
 
     for (var doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
@@ -42,58 +41,23 @@ class _HomeScreenState extends State<HomeScreen> {
       final nameRaw = (data['name'] ?? '').toString();
       final formattedName = formatName(nameRaw);
       final isHidden = data['isHidden'] ?? false;
-      final isFamily = data['isFamily'] ?? false;
-      final familyId = data['familyId'] ?? '';
 
-      data['id'] = id;
-      data['name'] = formattedName;
-      data['isFamily'] = isFamily; // Ensure these are explicitly added to data map
-      data['familyId'] = familyId;
-      data['isHidden'] = isHidden;
+      // Skip hidden members if not showing them
+      if (!showHidden && isHidden) continue;
 
-      if (isFamily && familyId.isNotEmpty) {
-        families.putIfAbsent(familyId, () => []).add(data);
-      } else {
-        allMembers.add(data); // Add head of family or independent members
-      }
-    }
-
-    // Now, add family members under their respective heads in the export list
-    // This part ensures a flat list for Excel but conceptually groups them.
-    // The exportMembersToExcel function will handle the actual row appending.
-    final List<Map<String, dynamic>> exportList = [];
-    int slno = 1;
-
-    // First add all independent members and family heads
-    for (var member in allMembers) {
-      if (! (member['isFamily'] ?? false)) { // Independent member
-        exportList.add({
-          'Slno': slno++,
-          ...member,
-        });
-      } else if ((member['isFamily'] ?? false) && (member['familyId'] ?? '').isEmpty) { // Head of family (if explicitly marked and no familyId)
-        exportList.add({
-          'Slno': slno++,
-          ...member,
-        });
-      }
-    }
-
-    // Now, go through the heads and add their family members
-    for (var head in allMembers.where((m) => (m['isFamily'] ?? false) && (m['familyId'] ?? '').isNotEmpty)) {
-      exportList.add({
-        'Slno': slno++,
-        ...head,
+      // Add formatted data to the list
+      allMembers.add({
+        'id': id,
+        'name': formattedName,
+        'phone': data['phone'] ?? '',
+        'address': data['address'] ?? '',
+        'isFamily': data['isFamily'] ?? false,
+        'familyId': data['familyId'] ?? '',
+        'isHidden': isHidden,
       });
-      final membersOfFamily = families[head['familyId']] ?? [];
-      for (var familyMember in membersOfFamily) {
-        exportList.add({
-          'Slno': slno++,
-          ...familyMember,
-        });
-      }
     }
-    return exportList;
+
+    return allMembers;
   }
 
   @override
@@ -109,15 +73,28 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: showHidden ? 'Hide Hidden Members' : 'Show Hidden Members',
             onPressed: () => setState(() => showHidden = !showHidden),
           ),
-          // New download button
+          // Fixed download button
           IconButton(
             icon: const Icon(Icons.download),
             tooltip: 'Download Members Data',
             onPressed: () async {
-              final snapshot = await membersCol.get();
-              final membersToExport = _prepareMembersForExport(snapshot.docs);
-              
-              exportMembersToExcel(context, membersToExport);
+              try {
+                final snapshot = await membersCol.get();
+                final membersToExport = _prepareMembersForExport(snapshot.docs);
+                
+                if (membersToExport.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No members to export')),
+                  );
+                  return;
+                }
+                
+                await exportMembersToExcel(context, membersToExport);
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error exporting data: $e')),
+                );
+              }
             },
           ),
         ],
@@ -258,7 +235,35 @@ class _HomeScreenState extends State<HomeScreen> {
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                         child: ExpansionTile(
-                          title: Text(headName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          title: Row(
+                            children: [
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue,
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  headName,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ),
                           subtitle: Text('Phone: $phone\nAddress: $address'),
                           children: [
                             Row(
@@ -364,8 +369,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                 final memberPhone = member['phone'] ?? '';
                                 final memberAddress = member['address'] ?? '';
                                 final memberId = member['id'];
+                                final familyMemberIndex = children.indexOf(member) + 1;
 
                                 return ListTile(
+                                  leading: Container(
+                                    width: 25,
+                                    height: 25,
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange,
+                                      borderRadius: BorderRadius.circular(12.5),
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        '${index + 1}.$familyMemberIndex',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                   title: Text(memberName),
                                   subtitle: Text('Phone: $memberPhone\nAddress: $memberAddress'),
                                   trailing: Wrap(
